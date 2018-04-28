@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "636642104063",
+    "firebase_url": "https://clanphotos-e5141.firebaseio.com",
+    "project_id": "clanphotos-e5141",
+    "storage_bucket": "clanphotos-e5141.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:636642104063:android:b657d80f4dea6868",
+        "android_client_info": {
+          "package_name": "au.com.clanphotos"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "636642104063-it03k8bnikt7vkdqmj70hs3r6ienpn4f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "au.com.clanphotos",
+            "certificate_hash": "7982b7199b2324821fd7052705cbe73d0d748ab8"
+          }
+        },
+        {
+          "client_id": "636642104063-ig1oscnmbsqiepepcntfj6ike6b652nh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrVpMijmm7OfdwlioVLBn3HoHxntKyG0M"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "636642104063-ig1oscnmbsqiepepcntfj6ike6b652nh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
