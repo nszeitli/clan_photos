@@ -16,7 +16,10 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn googleSignIn = new GoogleSignIn();
+  import 'package:flutter_facebook_login/flutter_facebook_login.dart';
+  
 
+  //Sign in method
   Future<FirebaseUser> _signIn() async{
     GoogleSignInAccount googleSignInAccount = await googleSignIn.signIn();
     GoogleSignInAuthentication gSA = await googleSignInAccount.authentication;
@@ -28,7 +31,11 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
 
     print("User name : ${user.displayName}");
     return user;
+  }
 
+  void signOut() {
+    googleSignIn.signOut();
+    print("User signed out");
   }
 
   @override
