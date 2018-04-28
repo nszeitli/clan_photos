@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 
 class LoginPage extends StatefulWidget{
   @override
@@ -16,11 +17,49 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn googleSignIn = new GoogleSignIn();
-  import 'package:flutter_facebook_login/flutter_facebook_login.dart';
-  
+  final FacebookLogin facebookSignIn = new FacebookLogin();
 
-  //Sign in method
-  Future<FirebaseUser> _signIn() async{
+  //Facebook sign in method
+  Future<FirebaseUser> _facebookSignIn() async {
+    FirebaseUser user;
+    final FacebookLoginResult result =
+        await facebookSignIn.logInWithReadPermissions(['email']);
+
+      switch (result.status) {
+      case FacebookLoginStatus.loggedIn:
+        final FacebookAccessToken accessToken = result.accessToken;
+        print('''
+         Logged in!
+         Token: ${accessToken.token}
+         User id: ${accessToken.userId}
+         Expires: ${accessToken.expires}
+         Permissions: ${accessToken.permissions}
+         Declined permissions: ${accessToken.declinedPermissions}
+         ''');
+         user = await _auth.signInWithFacebook(
+      accessToken: result.accessToken.token);
+      print("Firebase login:" + user.displayName);
+        return user;
+        break;
+      case FacebookLoginStatus.cancelledByUser:
+        print('Login cancelled by the user.');return null;
+        break;
+      case FacebookLoginStatus.error:
+        print('Something went wrong with the login process.\n'
+            'Here\'s the error Facebook gave us: ${result.errorMessage}');return null;
+        break;
+    }
+    return user;
+  }
+
+
+    //Facebook sign out
+    Future<Null> _facebookSignOut() async {
+    await facebookSignIn.logOut();
+  }
+
+  //Google sign in method
+  Future<FirebaseUser> _googleSignIn() async{
     GoogleSignInAccount googleSignInAccount = await googleSignIn.signIn();
     GoogleSignInAuthentication gSA = await googleSignInAccount.authentication;
 
@@ -32,8 +71,8 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
     print("User name : ${user.displayName}");
     return user;
   }
-
-  void signOut() {
+  //Google sign out method
+  void googleSignOut() {
     googleSignIn.signOut();
     print("User signed out");
   }
@@ -106,24 +145,36 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
                   child: new Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      new MaterialButton(
-                      height: 40.0,
-                      minWidth: 90.0,
-                      onPressed: () => {},
-                      color: Colors.teal,
-                      textColor: Colors.white,
-                      child: new Text("login")
-                      ),
-                      new Padding(padding: EdgeInsets.all(10.0),),
+                      
                       new MaterialButton(
                         height: 40.0,
-                        minWidth: 90.0,
-                        onPressed: () => _signIn()
+                        minWidth: 70.0,
+                        onPressed: () => _facebookSignIn()
                         .then((FirebaseUser user) => print(user))
                         .catchError((e) => print(e)),
                         color: Colors.teal,
                         textColor: Colors.white,
-                        child: new Text("Sign in with google")
+                        child: new Row(children: <Widget>[
+                            new Text("Sign in with "),
+                            new Padding(padding: EdgeInsets.all(5.0),),
+                            new Image(image: new AssetImage("assets/fb.png"), width: 20.0, height: 20.0, color: null, fit: BoxFit.scaleDown, alignment: Alignment.center,)
+                        ],) 
+                      ),
+                      new Padding(padding: EdgeInsets.all(7.0),),
+                      new MaterialButton(
+                        height: 40.0,
+                        minWidth: 70.0,
+                        onPressed: () => _googleSignIn()
+                        .then((FirebaseUser user) => print(user))
+                        .catchError((e) => print(e)),
+                        color: Colors.teal,
+                        textColor: Colors.white,
+                        child: new Row(children: <Widget>[
+                            new Text("Sign in with "),
+                            new Padding(padding: EdgeInsets.all(5.0),),
+                            new Image(image: new AssetImage("assets/google.png"), width: 20.0, height: 20.0, color: null, fit: BoxFit.scaleDown, alignment: Alignment.center,)
+
+                        ],) 
                       ),
                     ] 
                   )
