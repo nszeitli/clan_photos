@@ -11,6 +11,8 @@ dependencies:
   firebase_auth:
   google_sign_in:
   flutter_facebook_login:
+  cloud_firestore:
+  
 
 
 

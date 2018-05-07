@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_login/flutter_facebook_login.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import './clan_login_page.dart';
+
+
 
 class LoginPage extends StatefulWidget{
   @override
@@ -16,6 +20,7 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
   Animation<double> _iconAnimation;
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final DocumentReference userInfo = Firestore.instance.collection("new").document("new");
   final GoogleSignIn googleSignIn = new GoogleSignIn();
   final FacebookLogin facebookSignIn = new FacebookLogin();
 
@@ -94,6 +99,68 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
   }
 
 
+
+void addUser(FirebaseUser user, DocumentReference docRef) {
+  Map<String,String> data = <String,String>{
+      "clanID" : "",
+      "userEmail" : user.providerData[1].email,
+      "userName" : user.displayName,
+      "userPhotoUrl" : user.providerData[1].photoUrl
+    };
+    _add(data, docRef);
+}
+
+  void _add(Map<String,String> data, DocumentReference doc){
+    doc.setData(data).whenComplete((){
+      print("Data added");
+    }).catchError((e) => print(e));
+  }
+  void _delete(){
+    userInfo.delete().whenComplete(() {
+      print("deleted");
+    });
+  }
+  void _update(Map<String,String> data){
+    userInfo.updateData(data).whenComplete((){
+      print("Data updated");
+    }).catchError((e) => print(e));
+  }
+  void _fetch(){
+    userInfo.get().then((datasnapshot){
+      if (datasnapshot.exists) {
+        String myText = datasnapshot.data['desc'];
+      }
+      
+    });
+  }
+  void loadClanPage(FirebaseUser user) {
+    //check if user exists in database, if not write it
+    DocumentReference userDoc = Firestore.instance.collection("users").document(user.providerData[1].email);
+    userDoc.get().then((datasnapshot){
+      if (!datasnapshot.exists) {
+        addUser(user, userDoc);
+        Navigator.push(
+            context,
+            new MaterialPageRoute(builder: (context) => new ClanLoginPage()),
+          );
+      }
+      else {
+        String clanID = datasnapshot['clanID'];
+        if (clanID == null || clanID.length == 0) {
+          // load clan login page
+          Navigator.push(
+            context,
+            new MaterialPageRoute(builder: (context) => new ClanLoginPage()),
+          );
+        }
+        else {
+          //load photo page
+
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
@@ -150,7 +217,7 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
                         height: 40.0,
                         minWidth: 70.0,
                         onPressed: () => _facebookSignIn()
-                        .then((FirebaseUser user) => print(user))
+                        .then((FirebaseUser user) => loadClanPage(user))
                         .catchError((e) => print(e)),
                         color: Colors.teal,
                         textColor: Colors.white,
