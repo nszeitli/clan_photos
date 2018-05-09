@@ -150,7 +150,7 @@ void addUser(FirebaseUser user, DocumentReference docRef) {
           // load clan login page
           Navigator.push(
             context,
-            new MaterialPageRoute(builder: (context) => new ClanLoginPage()),
+            new MaterialPageRoute(builder: (context) => new ClanLoginPage(user: user)),
           );
         }
         else {

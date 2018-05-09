@@ -1,39 +1,25 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'clan_create_page.dart';
 
-// once logged in, if no clanID, ask to create new clan photo repo or login to existing repo
-
-class ClanLoginPage extends StatefulWidget {
-  ClanLoginPage({this.user});
+class ClanCreatePage extends StatefulWidget {
+  ClanCreatePage({this.user});
   final FirebaseUser user;
-    @override
-  _ClanLoginPageState createState() => new _ClanLoginPageState();
+  @override
+  _ClanCreatePageState createState() => new _ClanCreatePageState();
 }
 
-class _ClanLoginPageState extends State<ClanLoginPage>
-    with SingleTickerProviderStateMixin {
+class _ClanCreatePageState extends State<ClanCreatePage>
+  
+  with SingleTickerProviderStateMixin {
   AnimationController _controller;
-
-  var _TextController = new TextEditingController();
-  
+  var _TextControllerID = new TextEditingController();
+  var _TextControllerPass = new TextEditingController();
+  _ClanCreatePageState({this.user});
   final FirebaseUser user;
-  _ClanLoginPageState({this.user});
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = new AnimationController(vsync: this);
-  }
   
-  @override
-  void dispose() {
-    super.dispose();
-    _controller.dispose();
-  }
-
-
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
@@ -68,12 +54,12 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                   crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[ 
                   new Text(
-                    "No photo repos on this account", 
+                    "To create a new clan photos repo", 
                     style: new TextStyle(color: Colors.white, fontSize: 18.0)
                     ),
                     new Padding(padding: EdgeInsets.all(7.0),),
                   new Text(
-                    "Sign into existing clan photo repo?", 
+                    "Think of a unique clanID and password", 
                     style: new TextStyle(color: Colors.white, fontSize: 18.0)
                     ),
                   new TextFormField(
@@ -81,7 +67,8 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                     labelText: "Enter Clan ID",
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    controller: _TextController,
+                    controller: _TextControllerID,
+                    
                   ),
                   new TextFormField(
                     decoration: new InputDecoration(
@@ -89,7 +76,8 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                     ),
                     keyboardType: TextInputType.text,
                     obscureText: true,
-                    controller: _TextController,
+                    controller: _TextControllerPass,
+
                   ),
                   new Padding(
                     padding: new EdgeInsets.only(top: 40.0),
@@ -99,39 +87,16 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                         new MaterialButton(
                           height: 40.0,
                           minWidth: 70.0,
-                          onPressed: () => addExistingClan(user),
+                          onPressed: () => attemptCreateRepo(user, _TextControllerID.text, _TextControllerPass.text),
                           color: Colors.teal,
                           textColor: Colors.white,
                           child: new Row(children: <Widget>[
-                              new Text("Sign in",),
+                              new Text("Create",),
                           ],) 
                         ),
-                        
                       ]
                     ),
                   ),
-                  new Padding(padding: EdgeInsets.all(25.0),),
-                  new Text(
-                    "Or create a new Clan Photos repo?", 
-                    style: new TextStyle(color: Colors.white, fontSize: 18.0)
-                    ),
-                    new Padding(padding: EdgeInsets.all(7.0),),
-                    new Container(
-                      width: 110.0, 
-                      child: new MaterialButton(
-                          height: 40.0,
-                          minWidth: 70.0,
-                          onPressed: () => Navigator.push(
-                            context,
-                            new MaterialPageRoute(builder: (context) => new ClanCreatePage(user: user)),
-                          ),
-                          color: Colors.teal,
-                          textColor: Colors.white,
-                          child: new Row(children: <Widget>[
-                              new Text("Create new",),
-                          ],) 
-                        ),
-                    ),
                     ],) 
                   )
               ),
@@ -143,11 +108,13 @@ class _ClanLoginPageState extends State<ClanLoginPage>
      );
   }
 
-  void addExistingClan(FirebaseUser user) {
+  bool attemptCreateRepo(FirebaseUser user, String clanID, String password) {
+    bool done = false;
+    //check database if clanID exists, if so return false if not create and return true
 
-  }
+    
 
-  void loadClanCreatePage(FirebaseUser user) {
 
+    return done;
   }
 }
