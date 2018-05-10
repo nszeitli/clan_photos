@@ -88,7 +88,13 @@ class _ClanCreatePageState extends State<ClanCreatePage>
                         new MaterialButton(
                           height: 40.0,
                           minWidth: 70.0,
-                          onPressed: () => attemptCreateRepo(user, _TextControllerID.text, _TextControllerPass.text),
+                          onPressed: () => attemptCreateRepo(user, _TextControllerID.text, _TextControllerPass.text)
+                          .then((createdOK){
+                            if(createdOK == true) 
+                            {  //load photos page  
+                            }  else {  //show text that clanID is taken  
+                            }}
+                          ),
                           color: Colors.teal,
                           textColor: Colors.white,
                           child: new Row(children: <Widget>[
