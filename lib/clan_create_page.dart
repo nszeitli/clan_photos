@@ -2,12 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ClanCreatePage extends StatefulWidget {
   ClanCreatePage({this.user});
   final FirebaseUser user;
   @override
-  _ClanCreatePageState createState() => new _ClanCreatePageState();
+  _ClanCreatePageState createState() => new _ClanCreatePageState(user: user);
 }
 
 class _ClanCreatePageState extends State<ClanCreatePage>
@@ -108,11 +109,32 @@ class _ClanCreatePageState extends State<ClanCreatePage>
      );
   }
 
-  bool attemptCreateRepo(FirebaseUser user, String clanID, String password) {
+  Future<bool> attemptCreateRepo (FirebaseUser user, String clanID, String password) async {
     bool done = false;
     //check database if clanID exists, if so return false if not create and return true
+    DocumentReference clanDoc = Firestore.instance.collection("clanData").document(clanID);
+    await clanDoc.get().then((datasnapshot){
+      if (datasnapshot.data == null) {
+        //add new clan
+        Map<String,String> data = <String,String>{
+        "clanID" : clanID,
+        "clanPassword" : password,
+        "clanCreator" : user.providerData[1].email,
+        "clanCreatorName" : user.displayName,
+        "clanCreatorPhotoUrl" : user.providerData[1].photoUrl
+      };
+        clanDoc.setData(data);
+        DocumentReference userDoc = Firestore.instance.collection("users").document(user.providerData[1].email);
+        Map<String,String> userData = <String,String>{
+          "clanID" : clanID,
+        };
+        userDoc.updateData(userData);
+      }
+      else {
+        // clanID taken
 
-    
+        }
+    });
 
 
     return done;

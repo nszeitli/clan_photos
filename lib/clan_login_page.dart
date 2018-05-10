@@ -9,15 +9,16 @@ class ClanLoginPage extends StatefulWidget {
   ClanLoginPage({this.user});
   final FirebaseUser user;
     @override
-  _ClanLoginPageState createState() => new _ClanLoginPageState();
+  _ClanLoginPageState createState() => new _ClanLoginPageState(user: user);
 }
 
 class _ClanLoginPageState extends State<ClanLoginPage>
     with SingleTickerProviderStateMixin {
   AnimationController _controller;
 
-  var _TextController = new TextEditingController();
-  
+  var _TextControllerA = new TextEditingController();
+  var _TextControllerB = new TextEditingController();
+
   final FirebaseUser user;
   _ClanLoginPageState({this.user});
 
@@ -81,7 +82,7 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                     labelText: "Enter Clan ID",
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    controller: _TextController,
+                    controller: _TextControllerA,
                   ),
                   new TextFormField(
                     decoration: new InputDecoration(
@@ -89,7 +90,7 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                     ),
                     keyboardType: TextInputType.text,
                     obscureText: true,
-                    controller: _TextController,
+                    controller: _TextControllerB,
                   ),
                   new Padding(
                     padding: new EdgeInsets.only(top: 40.0),

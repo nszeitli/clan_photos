@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import './clan_login_page.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 
 
@@ -23,6 +24,7 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
   final DocumentReference userInfo = Firestore.instance.collection("new").document("new");
   final GoogleSignIn googleSignIn = new GoogleSignIn();
   final FacebookLogin facebookSignIn = new FacebookLogin();
+  
 
   //Facebook sign in method
   Future<FirebaseUser> _facebookSignIn() async {
@@ -133,33 +135,35 @@ void addUser(FirebaseUser user, DocumentReference docRef) {
       
     });
   }
-  void loadClanPage(FirebaseUser user) {
+  void loadClanPage (FirebaseUser user)  async {
     //check if user exists in database, if not write it
     DocumentReference userDoc = Firestore.instance.collection("users").document(user.providerData[1].email);
-    userDoc.get().then((datasnapshot){
-      if (!datasnapshot.exists) {
-        addUser(user, userDoc);
-        Navigator.push(
-            context,
-            new MaterialPageRoute(builder: (context) => new ClanLoginPage()),
-          );
-      }
-      else {
-        String clanID = datasnapshot['clanID'];
-        if (clanID == null || clanID.length == 0) {
-          // load clan login page
-          Navigator.push(
-            context,
-            new MaterialPageRoute(builder: (context) => new ClanLoginPage(user: user)),
-          );
-        }
-        else {
-          //load photo page
+    
+    await userDoc.get().then((datasnapshot){
+            if ( datasnapshot.data == null ) {
+            addUser(user, userDoc);
+            Navigator.push(
+                context,
+                new MaterialPageRoute(builder: (context) => new ClanLoginPage(user: user)),
+              );
+          }
+          else {
+            String clanID = datasnapshot['clanID'];
+            if (clanID == null || clanID.length == 0) {
+              // load clan login page
+              Navigator.push(
+                context,
+                new MaterialPageRoute(builder: (context) => new ClanLoginPage(user: user)),
+              );
+            }
+            else {
+              //load photo page
 
-        }
-      }
-    });
-  }
+            }
+          }
+        }).catchError((e) => print(e.toString()));
+    }
+
 
   @override
   Widget build(BuildContext context) {
