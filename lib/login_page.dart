@@ -7,6 +7,7 @@ import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import './clan_login_page.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'photo_landing_page.dart';
 
 
 
@@ -158,7 +159,10 @@ void addUser(FirebaseUser user, DocumentReference docRef) {
             }
             else {
               //load photo page
-
+              Navigator.push(
+                context,
+                new MaterialPageRoute(builder: (context) => new PhotoLandingPage(user: user)),
+              );
             }
           }
         }).catchError((e) => print(e.toString()));
