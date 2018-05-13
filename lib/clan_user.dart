@@ -3,7 +3,7 @@ import 'dart:io';
 class ClanUserProfile {
   
   FirebaseUser firebaseUser;
-  
+  Map<String, String> dataFromDoc;
   String displayName;
   String emailAddress;
   String displayPhotoURL;
@@ -12,8 +12,8 @@ class ClanUserProfile {
   bool fbLogin;
   bool googleLogin;
   
-  List<String> clanNameList;
-  List<ClanData> clanDataList;
+  List<String> clanNameList = new List<String>();
+  List<ClanData> clanDataList= new List<ClanData>();
 
   ClanUserProfile(FirebaseUser firebaseUser, bool fbLogin, bool googleLogin) 
   {
@@ -45,11 +45,16 @@ class ClanUserProfile {
 
 class ClanData {
   
-  String clanName;
+  String clanID;
   String clanPassword;
+  String clanCreator;
+  String clanCreatorName;
+  String clanCreatorPhotoUrl;
+  String imageCollectionID;
+  List<Map<String, String>> imageDataList;
 
   Map<String, String> imageListMap;
   Map<String, File> imageFileMap;
   
-  ClanData({this.clanName, this.clanPassword});
+  ClanData({this.clanID, this.clanPassword});
 }

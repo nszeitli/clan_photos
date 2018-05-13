@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'clan_user.dart';
+import 'photo_landing_page.dart';
 
 class ClanCreatePage extends StatefulWidget {
   ClanCreatePage({this.clanUserProfile});
@@ -92,7 +93,12 @@ class _ClanCreatePageState extends State<ClanCreatePage>
                           onPressed: () => attemptCreateRepo(_TextControllerID.text, _TextControllerPass.text)
                           .then((createdOK){
                             if(createdOK == true) 
-                            {  //load photos page  
+                            {  
+                            //load photo page
+                              Navigator.push(
+                                context,
+                                new MaterialPageRoute(builder: (context) => new PhotoLandingPage(clanUserProfile: clanUserProfile)),
+                              );
                             }  else {  //show text that clanID is taken  
                             }}
                           ),
@@ -128,7 +134,8 @@ class _ClanCreatePageState extends State<ClanCreatePage>
         "clanPassword" : password,
         "clanCreator" : clanUserProfile.emailAddress,
         "clanCreatorName" : clanUserProfile.displayName,
-        "clanCreatorPhotoUrl" : clanUserProfile.displayPhotoURL
+        "clanCreatorPhotoUrl" : clanUserProfile.displayPhotoURL,
+        "imageCollectionID" : clanID + "_" + "images"
       };
         clanDoc.setData(data);
         DocumentReference userDoc = Firestore.instance.collection("users").document(clanUserProfile.emailAddress);
@@ -136,15 +143,17 @@ class _ClanCreatePageState extends State<ClanCreatePage>
         for (var s in clanUserProfile.clanNameList) {
           concatClanList = concatClanList + s + ";";
         }
-
+        concatClanList = concatClanList + clanID + ";";
+        clanUserProfile.clanNameList.add(clanID);
         Map<String,String> userData = <String,String>{
           "clanID" : concatClanList,
         };
         userDoc.updateData(userData);
+        done = true;
       }
       else {
         // clanID taken
-
+        done = false;
         }
     });
 

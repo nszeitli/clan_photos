@@ -10,7 +10,7 @@ class ClanLoginPage extends StatefulWidget {
   ClanLoginPage({this.clanUserProfile});
   final ClanUserProfile clanUserProfile;
     @override
-  _ClanLoginPageState createState() => new _ClanLoginPageState(user: user);
+  _ClanLoginPageState createState() => new _ClanLoginPageState(clanUserProfile: clanUserProfile);
 }
 
 class _ClanLoginPageState extends State<ClanLoginPage>
@@ -101,7 +101,7 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                         new MaterialButton(
                           height: 40.0,
                           minWidth: 70.0,
-                          onPressed: () => addExistingClan(user),
+                          onPressed: () => addExistingClan(),
                           color: Colors.teal,
                           textColor: Colors.white,
                           child: new Row(children: <Widget>[
@@ -125,7 +125,7 @@ class _ClanLoginPageState extends State<ClanLoginPage>
                           minWidth: 70.0,
                           onPressed: () => Navigator.push(
                             context,
-                            new MaterialPageRoute(builder: (context) => new ClanCreatePage(user: user)),
+                            new MaterialPageRoute(builder: (context) => new ClanCreatePage(clanUserProfile: clanUserProfile)),
                           ),
                           color: Colors.teal,
                           textColor: Colors.white,
@@ -145,11 +145,9 @@ class _ClanLoginPageState extends State<ClanLoginPage>
      );
   }
 
-  void addExistingClan(FirebaseUser user) {
+  void addExistingClan() {
 
   }
 
-  void loadClanCreatePage(FirebaseUser user) {
 
-  }
 }

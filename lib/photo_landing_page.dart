@@ -9,6 +9,8 @@ import 'dart:math';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'clan_user.dart';
+import 'dart:core';
+
 
 class PhotoLandingPage extends StatefulWidget {
   PhotoLandingPage({this.clanUserProfile});
@@ -23,6 +25,7 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
 
   _PhotoLandingPageState({this.clanUserProfile});
   ClanUserProfile clanUserProfile;
+  ClanData clanData;
 
   List<DocumentSnapshot> images;
   String currentClanID = "";
@@ -36,7 +39,8 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   void initState() {
     super.initState();
     _controller = new AnimationController(vsync: this);
-    clanUserProfile.clanNameList[0];
+    currentClanID = clanUserProfile.clanNameList[0];
+    getClanData();
   }
   
   @override
@@ -86,8 +90,59 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   final StorageUploadTask uploadTask = ref.putFile(image); 
   final Uri downloadUrl = (await uploadTask.future).downloadUrl;
   print("Upload complete");
+  
+  //update database to reflect uploaded file
+  updateClanDatabase(image, clanUserProfile.firebaseUser.uid.toString() + "_" + imageID.toString() + ".jpg");
+  //update local clan object
+  
 
+  }
 
-}
+  updateClanDatabase(File image, String storageRef) async {
+    DocumentReference imageDoc = Firestore.instance.collection(this.clanData.imageCollectionID).document(storageRef);
+    var now = new DateTime.now();String formatted = "${now.day.toString().padLeft(2,'0')}-${now.month.toString().padLeft(2,'0')}-${now.year.toString()}";
+    Map<String,String> data = <String,String>{
+      "fileSize" : "110",
+      "localPath" : image.path,
+      "storageRef" : storageRef,
+      "uploadedBy" : clanUserProfile.emailAddress,
+      "uploadedDate" : formatted,
+      "galleryNo" : "0"
+    };
+    await imageDoc.setData(data);
+    clanData.imageDataList.add(data);
+  }
 
+  getClanData() async {
+    DocumentReference clanDoc = Firestore.instance.collection("clanData").document(currentClanID);
+    clanDoc.get().then((datasnapshot){
+        if (datasnapshot.data != null) {
+            ClanData clanData = new ClanData();
+            clanData.clanID = currentClanID;
+            clanData.clanPassword = datasnapshot['clanPassword'];
+            clanData.clanCreator = datasnapshot["clanCreator"];
+            clanData.clanCreatorName = datasnapshot["clanCreatorName"];
+            clanData.clanCreatorPhotoUrl = datasnapshot["clanCreatorPhotoUrl"];
+            clanData.imageCollectionID = datasnapshot["imageCollectionID"];
+
+            //get image library details
+            clanData.imageDataList = new List<Map<String, String>>();
+            CollectionReference imageCollection = Firestore.instance.collection(clanData.imageCollectionID);
+            var query = imageCollection.where("fileSize", isEqualTo: "100");
+
+            query.getDocuments()
+            .then((docs) {
+              if (docs.documents != null) {
+                for (var doc in docs.documents) {
+                  clanData.imageDataList.add(doc.data);
+                }
+              }
+            });
+             setState(() {
+              this.clanData = clanData;
+              });
+            
+        }
+    });
+  }
 }
