@@ -2,12 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'clan_create_page.dart';
+import 'clan_user.dart';
 
 // once logged in, if no clanID, ask to create new clan photo repo or login to existing repo
 
 class ClanLoginPage extends StatefulWidget {
-  ClanLoginPage({this.user});
-  final FirebaseUser user;
+  ClanLoginPage({this.clanUserProfile});
+  final ClanUserProfile clanUserProfile;
     @override
   _ClanLoginPageState createState() => new _ClanLoginPageState(user: user);
 }
@@ -19,8 +20,8 @@ class _ClanLoginPageState extends State<ClanLoginPage>
   var _TextControllerA = new TextEditingController();
   var _TextControllerB = new TextEditingController();
 
-  final FirebaseUser user;
-  _ClanLoginPageState({this.user});
+   ClanUserProfile clanUserProfile;
+  _ClanLoginPageState({this.clanUserProfile});
 
   @override
   void initState() {

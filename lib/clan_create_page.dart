@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'clan_user.dart';
 
 class ClanCreatePage extends StatefulWidget {
-  ClanCreatePage({this.user});
-  final FirebaseUser user;
+  ClanCreatePage({this.clanUserProfile});
+  final ClanUserProfile clanUserProfile;
   @override
-  _ClanCreatePageState createState() => new _ClanCreatePageState(user: user);
+  _ClanCreatePageState createState() => new _ClanCreatePageState(clanUserProfile: clanUserProfile);
 }
 
 class _ClanCreatePageState extends State<ClanCreatePage>
@@ -17,8 +18,8 @@ class _ClanCreatePageState extends State<ClanCreatePage>
   AnimationController _controller;
   var _TextControllerID = new TextEditingController();
   var _TextControllerPass = new TextEditingController();
-  _ClanCreatePageState({this.user});
-  final FirebaseUser user;
+  _ClanCreatePageState({this.clanUserProfile});
+  ClanUserProfile clanUserProfile;
 
   
   @override
@@ -88,7 +89,7 @@ class _ClanCreatePageState extends State<ClanCreatePage>
                         new MaterialButton(
                           height: 40.0,
                           minWidth: 70.0,
-                          onPressed: () => attemptCreateRepo(user, _TextControllerID.text, _TextControllerPass.text)
+                          onPressed: () => attemptCreateRepo(_TextControllerID.text, _TextControllerPass.text)
                           .then((createdOK){
                             if(createdOK == true) 
                             {  //load photos page  
@@ -115,7 +116,7 @@ class _ClanCreatePageState extends State<ClanCreatePage>
      );
   }
 
-  Future<bool> attemptCreateRepo (FirebaseUser user, String clanID, String password) async {
+  Future<bool> attemptCreateRepo (String clanID, String password) async {
     bool done = false;
     //check database if clanID exists, if so return false if not create and return true
     DocumentReference clanDoc = Firestore.instance.collection("clanData").document(clanID);
@@ -125,14 +126,19 @@ class _ClanCreatePageState extends State<ClanCreatePage>
         Map<String,String> data = <String,String>{
         "clanID" : clanID,
         "clanPassword" : password,
-        "clanCreator" : user.providerData[1].email,
-        "clanCreatorName" : user.displayName,
-        "clanCreatorPhotoUrl" : user.providerData[1].photoUrl
+        "clanCreator" : clanUserProfile.emailAddress,
+        "clanCreatorName" : clanUserProfile.displayName,
+        "clanCreatorPhotoUrl" : clanUserProfile.displayPhotoURL
       };
         clanDoc.setData(data);
-        DocumentReference userDoc = Firestore.instance.collection("users").document(user.providerData[1].email);
+        DocumentReference userDoc = Firestore.instance.collection("users").document(clanUserProfile.emailAddress);
+        String concatClanList = "";
+        for (var s in clanUserProfile.clanNameList) {
+          concatClanList = concatClanList + s + ";";
+        }
+
         Map<String,String> userData = <String,String>{
-          "clanID" : clanID,
+          "clanID" : concatClanList,
         };
         userDoc.updateData(userData);
       }
