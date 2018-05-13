@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'clan_user.dart';
 import 'dart:core';
+import 'package:http/http.dart' as http;
 
 
 class PhotoLandingPage extends StatefulWidget {
@@ -27,13 +28,14 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   ClanUserProfile clanUserProfile;
   ClanData clanData;
 
-  List<DocumentSnapshot> images;
-  String currentClanID = "";
   File _image;
+  List<DocumentSnapshot> images;
+  List<String> imageURLs = new List<String>();
+  String currentClanID = "";
 
+  StreamSubscription<QuerySnapshot> subscription;
   List<DocumentSnapshot> imageList;
-  final CollectionReference collectionReference =
-      Firestore.instance.collection("wallpapers");
+  CollectionReference collectionReference;
 
   @override
   void initState() {
@@ -49,28 +51,54 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
     _controller.dispose();
   }
   
-
+  
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
         title: new Text("Your Photo Repositories"),
-      ),
-     backgroundColor: Colors.blueGrey, 
-     //body: new StaggeredGridView(children: <Widget>[],)
-     body: new Column(
-       children: <Widget>[
-         new Text("Staggered gridview"),
-         new FlatButton(
-           child: new Text("UPLOAD"),
+        actions: <Widget>[
+          new FlatButton(
+           child: new Text("+"),
           onPressed: () => pickUpload()
           .then((File image) => upload(image)),
-          ),
-       ],
-     )
+          )
+        ]
+      ),
+     backgroundColor: Colors.blueGrey, 
+     body: imageList != null?
+     new StaggeredGridView.countBuilder(
+       padding: new EdgeInsets.all(8.0),
+       crossAxisCount: 4,
+       itemCount: imageURLs.length,
+       itemBuilder: (context, i){
+         String url = imageURLs[i];
+         return new Material(
+          elevation: 8.0,
+          borderRadius: new BorderRadius.all(new Radius.circular(8.0)),
+          child: new InkWell(
+            child: new Hero(
+              tag: url,
+              child: new FadeInImage(
+                image: new NetworkImage(url),
+                fit: BoxFit.cover,
+                placeholder: new AssetImage("assets/loading.jpg"),
+              ),
+            )
+          )
+         );
+       },
+       staggeredTileBuilder: (i) => new StaggeredTile.count(2, i.isEven?2:3),
+       mainAxisSpacing: 8.0,
+       crossAxisSpacing: 8.0,
+     ): new Center(
+       child: new CircularProgressIndicator(),
+     ),
     );
   }
+
+  
 
 
   Future<File> pickUpload() async  {
@@ -84,17 +112,16 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   }
 
    upload(File image) async {
-  var rng = new Random(); int imageID = rng.nextInt(1000000); // TODO get unique iterative fileID
-  final StorageReference ref = FirebaseStorage.instance.ref().child(currentClanID + "_" + "_" + imageID.toString() + ".jpg");
-  print("Starting upload: " + currentClanID + "_" + imageID.toString() + ".jpg");
-  final StorageUploadTask uploadTask = ref.putFile(image); 
-  final Uri downloadUrl = (await uploadTask.future).downloadUrl;
-  print("Upload complete");
-  
-  //update database to reflect uploaded file
-  updateClanDatabase(image, clanUserProfile.firebaseUser.uid.toString() + "_" + imageID.toString() + ".jpg");
-  //update local clan object
-  
+    var rng = new Random(); int imageID = rng.nextInt(1000000); // TODO get unique iterative fileID
+    final StorageReference ref = FirebaseStorage.instance.ref().child(currentClanID + "_" + "_" + imageID.toString() + ".jpg");
+    print("Starting upload: " + currentClanID + "_" + imageID.toString() + ".jpg");
+    final StorageUploadTask uploadTask = ref.putFile(image); 
+    final Uri downloadUrl = (await uploadTask.future).downloadUrl;
+    print("Upload complete");
+    
+    //update database to reflect uploaded file
+    updateClanDatabase(image, clanUserProfile.firebaseUser.uid.toString() + "_" + imageID.toString() + ".jpg");
+    //update local clan object
 
   }
 
@@ -137,12 +164,32 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
                   clanData.imageDataList.add(doc.data);
                 }
               }
-            });
-             setState(() {
-              this.clanData = clanData;
+              setState(() {
+                this.clanData = clanData;
+                  collectionReference = imageCollection;
+                });
+                this.subscription = collectionReference.snapshots().listen((datasnapshot){
+                setState(() {
+                  imageList = datasnapshot.documents;
+                });
               });
-            
+             });
         }
     });
+  
   }
+  updateUrls(String storageRefStr) async {
+    List<String> newImageURLs = new List<String>();
+    for (var doc in imageList) {
+      String storageRefStr = doc['storageRef'];
+      StorageReference imageRef =  FirebaseStorage.instance.ref().child(storageRefStr);
+      String url = await imageRef.getDownloadURL();
+      newImageURLs.add(url);
+    }
+
+    setState(() {
+      imageURLs = newImageURLs;
+    });
+  }
+
 }
