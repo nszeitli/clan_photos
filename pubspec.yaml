@@ -15,7 +15,10 @@ dependencies:
   flutter_staggered_grid_view:
   firebase_storage:
   image_picker:
-    
+  image:
+  path_provider:
+  sprintf:
+  transparent_image:
 
 dev_dependencies:
   flutter_test:

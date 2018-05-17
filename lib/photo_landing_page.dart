@@ -11,6 +11,12 @@ import 'package:image_picker/image_picker.dart';
 import 'clan_user.dart';
 import 'dart:core';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as image_util;
+import 'package:path_provider/path_provider.dart';
+import 'exif/read_exif.dart';
+import 'exif/exif_types.dart';
+import 'package:transparent_image/transparent_image.dart';
+
 
 
 class PhotoLandingPage extends StatefulWidget {
@@ -31,10 +37,11 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   File _image;
   List<DocumentSnapshot> images;
   List<String> imageURLs = new List<String>();
+  List<Image> imageObjects = new List<Image>();
   String currentClanID = "";
 
   StreamSubscription<QuerySnapshot> subscription;
-  List<DocumentSnapshot> imageList;
+  List<DocumentSnapshot> imageList = new List<DocumentSnapshot>();
   CollectionReference collectionReference;
 
   @override
@@ -43,6 +50,7 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
     _controller = new AnimationController(vsync: this);
     currentClanID = clanUserProfile.clanNameList[0];
     getClanData();
+    
   }
   
   @override
@@ -56,34 +64,40 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
+      
       appBar: new AppBar(
         title: new Text("Your Photo Repositories"),
         actions: <Widget>[
+          
           new FlatButton(
            child: new Text("+"),
-          onPressed: () => pickUpload()
-          .then((File image) => upload(image)),
-          )
+           
+            onPressed: () {
+              //debugDumpApp();
+              pickUpload().then((image) => upload(_image));
+            }
+          ),
         ]
       ),
      backgroundColor: Colors.blueGrey, 
      body: imageList != null?
      new StaggeredGridView.countBuilder(
-       padding: new EdgeInsets.all(8.0),
+       
+       padding: new EdgeInsets.all(7.0),
        crossAxisCount: 4,
-       itemCount: imageURLs.length,
+       itemCount: imageObjects.length,
        itemBuilder: (context, i){
-         String url = imageURLs[i];
+         print(imageList.toString());
          return new Material(
           elevation: 8.0,
-          borderRadius: new BorderRadius.all(new Radius.circular(8.0)),
+          borderRadius: new BorderRadius.all(new Radius.circular(7.0)),
           child: new InkWell(
             child: new Hero(
-              tag: url,
+              tag: "tag",
               child: new FadeInImage(
-                image: new NetworkImage(url),
+                image: imageObjects[i].image,
                 fit: BoxFit.cover,
-                placeholder: new AssetImage("assets/loading.jpg"),
+                placeholder: new AssetImage("assets/dog.jpg"),
               ),
             )
           )
@@ -107,31 +121,74 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
         setState(() {
       _image = image;
       });
-    
-    return image;
+      return image;
   }
 
-   upload(File image) async {
+  Future<File> getThumbnail(File fullsizeImage, String thumbnailPath) async {
+    Map<String, IfdTag> exif = await readExifFromFile(new File(fullsizeImage.path));
+    String orientation = exif["Image Orientation"].printable;
+
+    
+    File thumbnailFile;
+    image_util.Image im = image_util.decodeImage(fullsizeImage.readAsBytesSync());
+    image_util.Image thumbnail = image_util.copyResize(im, 800);
+    if(orientation.contains('Rotated')) {
+      thumbnail = image_util.copyRotate(thumbnail, 90);
+    }
+    
+    var data = image_util.encodeJpg(thumbnail); 
+    thumbnailFile = new File(thumbnailPath);
+    try { thumbnailFile.writeAsBytesSync(data);} catch (error) {print(error);}
+      
+
+    return thumbnailFile;
+  }
+
+  
+   upload(File imagee) async {
+    //Create filename & storeage reference for new image
     var rng = new Random(); int imageID = rng.nextInt(1000000); // TODO get unique iterative fileID
-    final StorageReference ref = FirebaseStorage.instance.ref().child(currentClanID + "_" + "_" + imageID.toString() + ".jpg");
+    final StorageReference ref = FirebaseStorage.instance.ref().child(currentClanID + "_"  + imageID.toString() + ".jpg");
+
+    //Thumbnail
+    String extension = ((imagee.path).replaceRange(0, (imagee.path).length - 4, ""));
+    StorageReference thumbRef = FirebaseStorage.instance.ref().child(currentClanID + "_"  + imageID.toString() + "_thumb" + ".jpg");
+    Directory tempDir = await getTemporaryDirectory();
+    String tempPath = tempDir.path;
+    String thumbnailPath = tempPath + "/" + currentClanID + "_"  + imageID.toString() +  "_thumbnail" + extension;
+
+    File thumbnailFile = await getThumbnail(imagee, thumbnailPath);
+    
+
+    //Start upload talk and await completion
     print("Starting upload: " + currentClanID + "_" + imageID.toString() + ".jpg");
-    final StorageUploadTask uploadTask = ref.putFile(image); 
-    final Uri downloadUrl = (await uploadTask.future).downloadUrl;
+    final StorageUploadTask uploadTaskThumb = thumbRef.putFile(thumbnailFile); 
+    final Uri downloadUrlThumb = (await uploadTaskThumb.future).downloadUrl;
     print("Upload complete");
     
     //update database to reflect uploaded file
-    updateClanDatabase(image, clanUserProfile.firebaseUser.uid.toString() + "_" + imageID.toString() + ".jpg");
-    //update local clan object
+    updateClanDatabase(imagee, currentClanID + "_"  + imageID.toString()  + ".jpg", currentClanID + "_"  + imageID.toString() + "_thumb"  + ".jpg");
 
+    //update local clan object
+    setState(() {
+        imageObjects.add(new Image.file(thumbnailFile));
+    });
+
+    //Start upload talk and await completion
+    print("Starting upload: " + currentClanID + "_" + imageID.toString() + ".jpg");
+    final StorageUploadTask uploadTask = ref.putFile(imagee); 
+    uploadTask.future.then((done) => print("Upload complete"));
   }
 
-  updateClanDatabase(File image, String storageRef) async {
+  updateClanDatabase(File image, String storageRef, String thumbRef) async {
+    //New doc ref to save metadata for image
     DocumentReference imageDoc = Firestore.instance.collection(this.clanData.imageCollectionID).document(storageRef);
     var now = new DateTime.now();String formatted = "${now.day.toString().padLeft(2,'0')}-${now.month.toString().padLeft(2,'0')}-${now.year.toString()}";
     Map<String,String> data = <String,String>{
       "fileSize" : "110",
       "localPath" : image.path,
       "storageRef" : storageRef,
+      "thumbStorageRef" : thumbRef,
       "uploadedBy" : clanUserProfile.emailAddress,
       "uploadedDate" : formatted,
       "galleryNo" : "0"
@@ -139,6 +196,8 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
     await imageDoc.setData(data);
     clanData.imageDataList.add(data);
   }
+  
+
 
   getClanData() async {
     DocumentReference clanDoc = Firestore.instance.collection("clanData").document(currentClanID);
@@ -155,13 +214,14 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
             //get image library details
             clanData.imageDataList = new List<Map<String, String>>();
             CollectionReference imageCollection = Firestore.instance.collection(clanData.imageCollectionID);
-            var query = imageCollection.where("fileSize", isEqualTo: "100");
+            var query = imageCollection;
 
             query.getDocuments()
             .then((docs) {
               if (docs.documents != null) {
                 for (var doc in docs.documents) {
-                  clanData.imageDataList.add(doc.data);
+                  //clanData.imageDataList.add(doc.data);
+                  imageList.add(doc);
                 }
               }
               setState(() {
@@ -173,23 +233,24 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
                   imageList = datasnapshot.documents;
                 });
               });
+             })
+             .then((d) {
+               downloadAllImages();
              });
         }
     });
   
   }
-  updateUrls(String storageRefStr) async {
-    List<String> newImageURLs = new List<String>();
-    for (var doc in imageList) {
-      String storageRefStr = doc['storageRef'];
-      StorageReference imageRef =  FirebaseStorage.instance.ref().child(storageRefStr);
-      String url = await imageRef.getDownloadURL();
-      newImageURLs.add(url);
-    }
 
-    setState(() {
-      imageURLs = newImageURLs;
-    });
-  }
+  downloadAllImages() async {
+    for (var doc in imageList) {
+      String storageRefStr = doc['thumbStorageRef'];
+
+      var data = await FirebaseStorage.instance.ref().child(storageRefStr).getData(100000000);
+        setState(() {
+          imageObjects.add(new Image.memory(data));
+        });
+      }
+    }
 
 }
