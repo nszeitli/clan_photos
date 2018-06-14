@@ -16,6 +16,8 @@ import 'package:path_provider/path_provider.dart';
 import 'exif/read_exif.dart';
 import 'exif/exif_types.dart';
 import 'package:transparent_image/transparent_image.dart';
+import 'fullscreen_image.dart';
+import 'login_page.dart';
 
 
 
@@ -38,6 +40,8 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   List<DocumentSnapshot> images;
   List<String> imageURLs = new List<String>();
   List<Image> imageObjects = new List<Image>();
+  List<File> thumbnailFiles = new List<File>();
+  List<StorageReference> fullImageRefs = new List<StorageReference>();
   String currentClanID = "";
 
   StreamSubscription<QuerySnapshot> subscription;
@@ -63,20 +67,14 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
 
   @override
   Widget build(BuildContext context) {
+    String headerString = " Clan: " + currentClanID;
     return new Scaffold(
       
       appBar: new AppBar(
-        title: new Text("Your Photo Repositories"),
+        title: new Text(headerString, 
+        style: new TextStyle(fontSize: 15.0),),
+        
         actions: <Widget>[
-          
-          new FlatButton(
-           child: new Text("+"),
-           
-            onPressed: () {
-              //debugDumpApp();
-              pickUpload().then((image) => upload(_image));
-            }
-          ),
         ]
       ),
      backgroundColor: Colors.blueGrey, 
@@ -92,15 +90,13 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
           elevation: 8.0,
           borderRadius: new BorderRadius.all(new Radius.circular(7.0)),
           child: new InkWell(
-            child: new Hero(
-              tag: "tag",
               child: new FadeInImage(
                 image: imageObjects[i].image,
                 fit: BoxFit.cover,
                 placeholder: new AssetImage("assets/dog.jpg"),
               ),
-            )
-          )
+              onTap: () =>_navigateAndDisplaySelection(context,fullImageRefs[i]),
+            ),
          );
        },
        staggeredTileBuilder: (i) => new StaggeredTile.count(2, i.isEven?2:3),
@@ -109,9 +105,86 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
      ): new Center(
        child: new CircularProgressIndicator(),
      ),
+     drawer: new Drawer(
+       child: new ListView( 
+        children: <Widget>[
+          new UserAccountsDrawerHeader(
+            accountName: new Text(clanUserProfile.displayName),
+            accountEmail: new Text(clanUserProfile.emailAddress),
+            currentAccountPicture: new GestureDetector(
+              child: new CircleAvatar(
+                backgroundImage: new NetworkImage(clanUserProfile.displayPhotoURL),
+              ),
+            ),
+          ),
+          new ListTile(
+            title: new Text("Log out"),
+            trailing: new Icon(Icons.arrow_upward),
+            onTap: _logOut(),
+          ),
+          new ListTile(
+            title: new Text("Second Page"),
+            trailing: new Icon(Icons.arrow_upward)
+          ),
+          new Divider(),
+          new ListTile(
+            title: new Text("Close"),
+            trailing: new Icon(Icons.cancel)
+          )
+        ],
+       ),
+     ),
+     floatingActionButton: new FloatingActionButton(
+       backgroundColor: Colors.blueAccent,
+       child: new Text("+", style: new TextStyle(fontSize: 25.0, color: Colors.white,)),
+       onPressed: () {
+          //debugDumpApp();
+          pickUpload().then((image) => upload(_image));
+        }),
     );
   }
 
+  _logOut() async {
+    //Logs out of firebase account
+    FirebaseAuth _auth = FirebaseAuth.instance;
+    _auth.signOut();
+    Navigator.pushAndRemoveUntil(
+      context,  new MaterialPageRoute(builder: (context) => new LoginPage()), (Route<dynamic> route) => false );
+
+      Scaffold
+          .of(context)
+          .showSnackBar(new SnackBar(content: new Text("Logged out")));
+  }
+
+  _navigateAndDisplaySelection(BuildContext context, StorageReference storRef) async {
+    // Navigator.push returns a Future that will complete after we call
+    // Navigator.pop on the Selection Screen!
+    final result = await Navigator.push(
+      context,
+      new MaterialPageRoute(builder: (context) => new FullScreenImagePage(storRef)),
+    );
+
+
+    Scaffold
+          .of(context)
+          .showSnackBar(new SnackBar(content: new Text("$result")));
+
+    switch(result) { 
+        case "Delete": {
+              deleteClanData(storRef.path);
+            } 
+        break; 
+      
+        case "Share": {  } 
+        break; 
+      
+        default: { print("Invalid choice"); }
+        break; 
+    } 
+
+  }
+
+  
   
 
 
@@ -172,12 +245,16 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
     //update local clan object
     setState(() {
         imageObjects.add(new Image.file(thumbnailFile));
+        thumbnailFiles.add(thumbnailFile);
     });
 
     //Start upload talk and await completion
     print("Starting upload: " + currentClanID + "_" + imageID.toString() + ".jpg");
     final StorageUploadTask uploadTask = ref.putFile(imagee); 
     uploadTask.future.then((done) => print("Upload complete"));
+    setState(() {
+        fullImageRefs.add(ref);
+    });
   }
 
   updateClanDatabase(File image, String storageRef, String thumbRef) async {
@@ -195,6 +272,30 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
     };
     await imageDoc.setData(data);
     clanData.imageDataList.add(data);
+  }
+
+  deleteClanData(String storageRef) async {
+    //New doc ref to save metadata for image
+    DocumentReference imageDoc = Firestore.instance.collection(this.clanData.imageCollectionID).document(storageRef);
+    StorageReference storeRef = FirebaseStorage.instance.ref().child(storageRef);
+    String thumb = storageRef.replaceAll(".jpg", ""); thumb = thumb + "_thumb.jpg";
+    StorageReference thumbStoreRef = FirebaseStorage.instance.ref().child(thumb);
+    imageDoc.delete();storeRef.delete(); thumbStoreRef.delete();
+    setState(() {
+      clanData.imageDataList.removeWhere((map) {
+        map["storageRef"] == storageRef;
+      });
+    });
+    setState(() {
+      int iRef = 0; 
+      for (var ref in fullImageRefs) {
+        if(ref.path.contains(storageRef)) {imageObjects.removeAt(iRef);}
+         iRef++;
+      }
+    fullImageRefs.removeWhere((ref) {
+     ref.path.contains(storageRef);
+    });
+    });
   }
   
 
@@ -231,6 +332,15 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
                 this.subscription = collectionReference.snapshots().listen((datasnapshot){
                 setState(() {
                   imageList = datasnapshot.documents;
+                  currentClanID = clanUserProfile.clanNameList[0];
+                });
+                setState(() {
+                  for (var doc in imageList) {
+                    String storageRefFull = doc['storageRef'];
+                    StorageReference storageReference = FirebaseStorage.instance.ref().child(storageRefFull);
+                    fullImageRefs.add(storageReference);
+                    
+                  }
                 });
               });
              })
@@ -245,7 +355,6 @@ class _PhotoLandingPageState extends State<PhotoLandingPage>
   downloadAllImages() async {
     for (var doc in imageList) {
       String storageRefStr = doc['thumbStorageRef'];
-
       var data = await FirebaseStorage.instance.ref().child(storageRefStr).getData(100000000);
         setState(() {
           imageObjects.add(new Image.memory(data));

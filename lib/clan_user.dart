@@ -30,6 +30,13 @@ class ClanUserProfile {
 
   }
 
+  void setDetails() {
+    this.displayName = this.firebaseUser.displayName;
+    this.emailAddress = this.firebaseUser.email;
+    this.displayPhotoURL = this.firebaseUser.photoUrl;
+
+  }
+
   void setClanDetails(String clanListFromDB, ) {
     List<String> clanList = clanListFromDB.split(";");
     this.clanNameList = clanList;

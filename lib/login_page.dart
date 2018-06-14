@@ -9,7 +9,7 @@ import './clan_login_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'photo_landing_page.dart';
 import 'clan_user.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class LoginPage extends StatefulWidget{
@@ -24,7 +24,9 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
   Animation<double> _iconAnimation;
   
   //Authorisation vars
-  
+  String _fbToken = "";
+  String _userEmail = "";
+  String _userPassword = "";
   FirebaseAuth _auth = FirebaseAuth.instance;
   GoogleSignIn googleSignIn = new GoogleSignIn();
   FacebookLogin facebookSignIn = new FacebookLogin();
@@ -44,6 +46,7 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
     );
     _iconAnimation.addListener(() => this.setState(() {}));
     _iconAnimationController.forward();
+    _getPrefs();
   }
 
   @override
@@ -80,12 +83,14 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
                   crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[ 
                   new TextFormField(
+                    initialValue: _userEmail,
                   decoration: new InputDecoration(
                     labelText: "Enter Email",
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
                 new TextFormField(
+                  initialValue: _userPassword,
                   decoration: new InputDecoration(
                     labelText: "Enter Password",
                   ),
@@ -142,6 +147,89 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
      ),
     );
   }
+
+
+  _getPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    //Check for last login details
+    String fbToken = prefs.getString('fbToken') ?? "";
+    String email = prefs.getString('userEmail') ?? "";
+    String password = prefs.getString('userPassword') ?? "";
+    if(fbToken.length > 0) {
+      setState(() {
+            _fbToken = fbToken;
+          });
+    }
+
+    if(email.length > 0 && password.length > 0) {
+      setState(() {
+            _userEmail = email;
+            _userPassword = password;
+          });
+    }
+    //check if already logged in
+      FirebaseUser user = await _auth.currentUser();
+      //If logged in with facebook data, populate profile from FB data in firebase object
+      if (user.providerData[1].email != null) {
+        //Previous fb login
+        clanUserProfile = new ClanUserProfile(user, true, false);
+        clanUserProfile.setDetailsFromFB();
+      }
+      else {
+        clanUserProfile = new ClanUserProfile(user, false, false);
+      }
+      if (user == null){
+        //check if user has FB token
+        if (_fbToken.length > 0 ) {
+          loginWithFBToken(_fbToken);
+        }
+        else if (_userEmail.length > 0 && _userPassword.length > 0) {
+          _firebaseSignIn();
+        }
+      }
+      else {
+        loadClanPage("OK");
+      }
+
+
+    //await prefs.setInt('counter', counter);
+}
+
+//firebase sign in
+  _firebaseSignIn() async {
+    FirebaseUser user = await _auth.signInWithEmailAndPassword(email: _userEmail, password: _userPassword); 
+    print("Firebase login:" + user.displayName);
+    clanUserProfile = new ClanUserProfile(user, true, false);
+    await getProfileDataFromFirebase();
+    
+  }
+
+  loginWithFBToken (String token) async {
+    FirebaseUser user;
+    user = await _auth.signInWithFacebook(
+      accessToken: token);
+    print("Firebase login:" + user.displayName);
+    clanUserProfile = new ClanUserProfile(user, true, false);
+    await getProfileDataFromFirebase();
+  }
+
+  getProfileDataFromFirebase() {
+    DocumentReference userDoc = Firestore.instance.collection("users").document(clanUserProfile.emailAddress);
+    userDoc.get().then((datasnapshot){
+        if (datasnapshot.data != null) {
+            ClanUserProfile updatedUser = clanUserProfile;
+            updatedUser.setClanDetails(datasnapshot['clanID']);
+            updatedUser.displayName = datasnapshot['userName'];
+            updatedUser.displayPhotoURL = datasnapshot["userPhotoUrl"];
+
+            setState(() {
+                  clanUserProfile = updatedUser;
+                });
+        }
+    });
+  }
+
+  
 
   void loadClanPage (String loginState)  async {
     if (loginState == "OK") {
@@ -238,6 +326,11 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
       print("Firebase login:" + user.displayName);
         clanUserProfile = new ClanUserProfile(user, true, false);
         clanUserProfile.setDetailsFromFB();
+        _auth.linkWithEmailAndPassword(email: user.providerData[1].email, password: "fbLogin" ).then((newUser) => user = newUser);
+        //Update shared prefs
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fbToken', accessToken.token);
+
         return "OK";
         break;
       case FacebookLoginStatus.cancelledByUser:
@@ -250,6 +343,8 @@ class LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixi
     }
     return "login error";  
   }
+
+  
 
     //Facebook sign out
     Future<Null> _facebookSignOut() async {

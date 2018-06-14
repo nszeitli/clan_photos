@@ -19,6 +19,9 @@ dependencies:
   path_provider:
   sprintf:
   transparent_image:
+  zoomable_image:
+  shared_preferences:
+
 
 dev_dependencies:
   flutter_test:
